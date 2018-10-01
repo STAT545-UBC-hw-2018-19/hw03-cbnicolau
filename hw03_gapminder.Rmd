@@ -1,0 +1,145 @@
+---
+title: "hw003"
+author: "Coni"
+date: "September 29, 2018"
+output: github_document
+---
+
+# Homework 03: Using dplyr/ggplot2 to manipulate and explore data
+
+Load required libraries
+
+```{r load libraries}
+suppressPackageStartupMessages(library(dplyr)) # to supress messages after library calls
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(gapminder))
+library(knitr)
+```
+
+Tasks (pick 3) - for each make a table and a figure, also make observations on what the figures show and the process
+
+# Max and Min GDP per capita for all continents
+
+The simplest way of finding the min or max is by grouping by continent and then summarizing. Disadvantage: it doesn't keep the name of the country or the year (which are kind of important)
+
+```{r min_gdp table}
+min_gdp <- gapminder %>%
+  group_by(continent) %>%
+  summarize(minGDP = min(gdpPercap) ) %>% 
+  arrange(continent) 
+
+knitr::kable(min_gdp)
+```
+
+The same can be done for the max
+
+```{r max_gdp table}
+max_gdp <- gapminder %>%
+  group_by(continent) %>%
+  summarize(maxGDP = max(gdpPercap) ) %>% 
+  arrange(continent) 
+
+knitr::kable(max_gdp)
+```
+
+And we can put both in the same table
+```{r min_and_max_gdp table}
+min_max <- gapminder%>%
+  group_by(continent) %>%
+  summarize(minGDP = min(gdpPercap), maxGDP = max(gdpPercap))
+
+knitr::kable(min_max)
+  
+```
+
+We can visualize this with a plot of maxGDP vs minGDP
+
+```{r min_and_max_gdp plot}
+min_max %>% ggplot(aes(x=minGDP, y=maxGDP)) +
+  geom_point(aes(color = continent))
+```
+
+
+
+An alternative, more elaborated way of doing it (repurposing code found [here](http://stat545.com/block010_dplyr-end-single-table.html#use-arrange-to-row-order-data-in-a-principled-way)) is the following. One advantage of this way is that we get to know the country and year associated to the lowest and highest GDP per continent.
+
+```{r min and max gdp with countries}
+my_df <- gapminder %>%
+  select(continent, country, gdpPercap, year) %>% #select relevant variables
+  group_by(continent) %>%
+  filter(min_rank(desc(gdpPercap)) < 2 | min_rank(gdpPercap) < 2) %>% 
+  # rank by gdp in desc order and ascending order and then apply filter to get only these numbers
+  arrange(continent) 
+
+knitr::kable(my_df)
+```
+
+## spread of GDP per capita within continents
+
+Let's have a look at the spread in gdp per continent with a boxplot and jitter plot first
+
+```{r gdpPercap per continent}
+ggplot(gapminder, aes(x = continent, y = gdpPercap)) +
+  geom_boxplot() +
+  geom_jitter(position = position_jitter(width = 0.1, height = 0), alpha = 0.2) +
+  scale_y_log10()
+```
+
+We see that Asia is the continent with a higher spread (more unequal between countries, and Oceania seems to be the one with the lower spread (less unequeal)
+
+There are a number of different measures of the spread:
+1. Standard deviation - `sd()`: square of the variance
+
+
+2. Interquartile range - `IWR()`: is the difference of its upper and lower quartiles. It is a measure of how far apart the middle portion of data spreads in value (more info [here](http://www.r-tutor.com/elementary-statistics/numerical-measures/interquartile-range))
+
+We can use `summarise()`, `sd()` and `IQR()` to get these values:
+
+```{r gdpPercap sd and IQR per continent table}
+gapminder %>%
+  group_by(continent) %>%
+  summarise(sd = sd(gdpPercap), IQR = IQR(gdpPercap)) %>%
+  kable()
+  
+```
+
+This values agree with the observation from the graph
+
+We can visualize how the standard deviation has changed for each continent in time with the following plot:
+
+```{r gdpPercap sd trends per continent}
+gapminder %>%
+  group_by(continent) %>%
+  mutate(sd = sd(gdpPercap), IQR = IQR(gdpPercap)) %>%
+  ggplot(aes(year, sd)) + geom_point(aes(color= continent))
+```
+
+
+#Trimmed mean of life expentacy for different years
+
+Acording to [wikipedia](https://en.wikipedia.org/wiki/Truncated_mean) "a truncated mean or trimmed mean is a statistical measure of central tendency, much like the mean and median. It involves the calculation of the mean after discarding given parts of a probability distribution or sample at the high and low end, and typically discarding an equal amount of both".
+
+- Compute a trimmed mean of life expectancy for different years. 
+```{r 10%trimmed mean lifeExp table}
+gapminder %>% 
+  group_by(continent, year) %>%
+  filter(year == 1952 | year == 2007) %>% #filter by year
+  summarize(trim_mean = mean(lifeExp, trim = 0.1)) %>% #compute the mean trimming the top and bottom 10%
+  kable()
+```
+
+This table allows to compare the trimmed mean life expectancy between continents and between the first and last year of measurement in the database.
+
+Now we can make a plot to visualize the evolution of the trimmed mean (10%) of life expectancy per continent. In this case I added a third variable to see how life exp and population correlate
+
+
+```{r trim_mean_lifeExp trends per continent}
+gapminder %>% 
+  group_by(continent, year) %>%
+  mutate(trim_mean_lifeExp = mean(lifeExp, trim = 0.1), mean_pop = mean(pop)) %>% 
+  ggplot(aes(x = year, y = trim_mean_lifeExp)) +
+  geom_point(aes(color = continent, size = mean_pop))
+```
+
+
+- How is life expectancy changing over time on different continents?
