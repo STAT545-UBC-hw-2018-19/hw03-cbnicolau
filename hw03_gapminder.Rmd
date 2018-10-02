@@ -88,8 +88,8 @@ ggplot(gapminder, aes(x = continent, y = gdpPercap)) +
 We see that Asia is the continent with a higher spread (more unequal between countries, and Oceania seems to be the one with the lower spread (less unequeal)
 
 There are a number of different measures of the spread:
-1. Standard deviation - `sd()`: square of the variance
 
+1. Standard deviation - `sd()`: square root of the variance (a measure of the distance to the mean)
 
 2. Interquartile range - `IWR()`: is the difference of its upper and lower quartiles. It is a measure of how far apart the middle portion of data spreads in value (more info [here](http://www.r-tutor.com/elementary-statistics/numerical-measures/interquartile-range))
 
@@ -103,7 +103,7 @@ gapminder %>%
   
 ```
 
-This values agree with the observation from the graph
+These values somewhat agree with the observation from the graph: we see that asia has the highest sd, but the lowerst corresponds to Africa. On the other hand, the highest IQR is that of Europe, and the lowest Africa's.
 
 We can visualize how the standard deviation has changed for each continent in time with the following plot:
 
@@ -141,5 +141,3 @@ gapminder %>%
   geom_point(aes(color = continent, size = mean_pop))
 ```
 
-
-- How is life expectancy changing over time on different continents?
